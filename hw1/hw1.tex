@@ -78,6 +78,8 @@ cat /proc/jiffies
 
     Be sure to remove \textit{/proc/jiffies} when the module is removed.
         
+    \subsection*{Thinking} It would not be a problem reporting the value of \textbf{jiffies} since it is directly declared in \textit{<linux/jiffies.h>}. The difficulty may lies in the understanding of each part of kernel structure in our first attempt of kernel designing. 
+    
     \subsection*{Answer} In this exercise, we design a kernel module named \textit{jiffies}. There are mainly three parts or three functions to realize our purpose.
     \begin{enumerate}
         \item[-] \textbf{proc\_init()}, the module entry point 
@@ -205,7 +207,9 @@ cat /proc/seconds
     \end{lstlisting}
 
     your kernel module will report the number of seconds that have elapsed since the kernel module was first loaded. Be sure to remove \textbf{/proc/seconds} when the module is removed.
-
+    
+    \subsection*{Thinking} This time, we need to keep some value. We may use a global variable to address this. Nothing new.
+    
     \subsection*{Answer}
     All three main functions are realized in a way similar to that in Exercise 1. The main difference lies on the output: the output changes depending on when we call the function. Besides this, everything is the same. 
 
