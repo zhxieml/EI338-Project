@@ -1,0 +1,12 @@
+.DS_Store
+a.out
+*.class
+*.cmd
+
+## Kernel file
+*.mod.c
+*.o
+*.ko
+*.mod.o
+*.symvers
+*.order
