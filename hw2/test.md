@@ -1,0 +1,4 @@
+- Creating the child process and executing the command in the child
+- Providing a history feature
+- Adding support of input and output redirection
+- Allowing the parent and child processes to communicate via a pipe
