@@ -11,11 +11,12 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #define MAX_LINE		80 /* 80 chars per line, per command */
 
-int parse_cmd(char *cmd, char **args, char *ifile, char *ofile) {
+int parse_cmd(char *cmd, char **args, char *ifile, char *ofile, int *split_pos) {
 	char *token;
 	int i = 0;
 	char redirect;
@@ -27,20 +28,22 @@ int parse_cmd(char *cmd, char **args, char *ifile, char *ofile) {
 			redirect = token[0];
 		}
 		else {
-			switch (redirect)
-			{
-			case '<':
-				strcpy(ifile, token);
-				break;
+			switch (redirect) {
+				case '<':
+					strcpy(ifile, token);
+					break;
 
-			case '>':
-				strcpy(ofile, token);
-				break;
-			
-			default:
-				args[i] = (char*) malloc(sizeof(char) * (strlen(token)));
-				strcpy(args[i], token);
-				++i;
+				case '>':
+					strcpy(ofile, token);
+					break;
+				
+				default:
+					args[i] = (char*) malloc(sizeof(char) * (strlen(token)));
+					strcpy(args[i], token);
+
+					if (!strcmp(token, "|")) *split_pos = i;
+
+					++i;
 			}
 		}
 
@@ -67,7 +70,7 @@ void print_args(char **args) {
 	}
 }
 
-int exe(char **args, int wait_flag, char *ifile, char *ofile) {
+int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 	pid_t pid;
 	off_t fd;
 	int exe_err;
@@ -75,23 +78,23 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile) {
 	pid = fork();
 
 	if (pid < 0) { /* error occurred */
-		fprintf(stderr, "Fork Failed\n");
+		fprintf(stderr, "Fork Failed.\n");
 		return 1;
 	}
 	else if (pid == 0) { /* child process */
-		if (strlen(ifile)) { // TODO: sort < input.txt
+		if (strlen(ifile)) {
 			fd = open(ifile, O_RDWR);
 			
 			if (fd < 0) {
-				printf("Error occurs when opening %s\n", ifile);
+				printf("Error occurs when opening %s.\n", ifile);
 				exit(0);
 			}
 			
-			dup2(fd, STDOUT_FILENO);
+			dup2(fd, STDIN_FILENO);
 		}
 		else if (strlen(ofile))	
 		{
-			fd = open(ofile, O_RDWR|O_CREAT);
+			fd = open(ofile, O_RDWR|O_CREAT, S_IRWXU);
 
 			if (fd < 0) {
 				printf("Error occurs when opening %s\n", ofile);
@@ -105,7 +108,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile) {
 
 		if (exe_err < 0) printf("The command is not executable.\n");
 
-		close(fd);
+		// close(fd);
 	}
 	else { /* parent process */
 		if (wait_flag) wait(NULL);
@@ -119,6 +122,7 @@ int main(void)
 	char cmd[MAX_LINE];
 	char cmd_history[MAX_LINE]; /* history buffer */
 	int wait_flag;
+	int split_pos;
 
 	char ifile[20];
 	char ofile[20];
@@ -159,13 +163,21 @@ int main(void)
 		}	
 		else strcpy(cmd_history, cmd);
 
-		wait_flag = parse_cmd(cmd, args, ifile, ofile);
+		wait_flag = parse_cmd(cmd, args, ifile, ofile, &split_pos);
 
 		printf("Input file: %s; output file: %s\n", ifile, ofile);
 
-		exe(args, wait_flag, ifile, ofile);
+		printf("Split position: %d\n", split_pos);
 
-		for (int i = 0; i < MAX_LINE/2 + 1; ++i) args[i] = NULL;
+		exe(args, wait_flag, ifile, ofile, split_pos);
+
+
+		// clear values
+		for (int i = 0; i < MAX_LINE/2 + 1; ++i) 
+		{	
+			free(args[i]);
+			args[i] = NULL;
+		}
 		ifile[0] = '\0';
 		ofile[0] = '\0';
 	}
