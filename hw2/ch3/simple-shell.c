@@ -15,6 +15,8 @@
 #include <fcntl.h>
 
 #define MAX_LINE		80 /* 80 chars per line, per command */
+#define READ_END		0
+#define WRITE_END		1
 
 int parse_cmd(char *cmd, char **args, char *ifile, char *ofile, int *split_pos) {
 	char *token;
@@ -70,19 +72,50 @@ void print_args(char **args) {
 	}
 }
 
+int get_former_args(char **args, int split_pos, char **former_args) {	
+	if (split_pos <= 0) return 1;
+
+	for (int i = 0; i < split_pos; ++i) {
+		former_args[i] = args[i];
+	}
+
+	former_args[split_pos] = NULL;
+
+	return 0;
+}
+
+int get_latter_args(char **args, int split_pos, char **latter_args) {
+	if (split_pos <= 0) return 1;
+
+	int i = 0;
+
+	while (args[i + split_pos + 1])
+	{
+		latter_args[i] = args[i + split_pos + 1];
+		++i;
+	}
+
+	if (i == 0) return 1;
+
+	latter_args[i] = NULL;
+
+	return 0;
+}
+
 int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 	pid_t pid;
 	off_t fd;
+	int pipe_fd[2];
 	int exe_err;
 
-	pid = fork();
+	pid = fork(); /* create child process */
 
 	if (pid < 0) { /* error occurred */
 		fprintf(stderr, "Fork Failed.\n");
 		return 1;
 	}
 	else if (pid == 0) { /* child process */
-		if (strlen(ifile)) {
+		if (strlen(ifile)) { /* redirect to input file */
 			fd = open(ifile, O_RDWR);
 			
 			if (fd < 0) {
@@ -92,7 +125,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 			
 			dup2(fd, STDIN_FILENO);
 		}
-		else if (strlen(ofile))	
+		else if (strlen(ofile)) /* redirect to output file */
 		{
 			fd = open(ofile, O_RDWR|O_CREAT, S_IRWXU);
 
@@ -103,15 +136,72 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 			
 			dup2(fd, STDOUT_FILENO);
 		}
-		
-		exe_err = execvp(args[0], args);
 
-		if (exe_err < 0) printf("The command is not executable.\n");
+		if (split_pos == 0) {
+			/* execute the command in the child process */
+			exe_err = execvp(args[0], args); 
+
+			if (exe_err < 0) printf("The command is not executable.\n");
+		}
+		else {
+			char *former_args[MAX_LINE/2 + 1];
+			char *latter_args[MAX_LINE/2 + 1];
+			pid_t pipe_pid;
+
+			if (get_former_args(args, split_pos, former_args) != 0 || get_latter_args(args, split_pos, latter_args) != 0) {
+				printf("Error occurs when separating the command.\n");
+				return 1;
+			}
+
+			/* create the pipe */
+			if (pipe(pipe_fd) == -1) {
+				fprintf(stderr, "Pipe failed");
+				return 1;
+			}
+
+			/* fork a child process */
+			pipe_pid = fork();
+
+			if (pipe_pid < 0) { /* error occurred */
+				fprintf(stderr, "Fork Failed");
+				return 1;
+			}
+			else if(pipe_pid == 0) { /* child process */
+				/* close the unused end of the pipe */
+				close(pipe_fd[READ_END]);
+
+				dup2(pipe_fd[WRITE_END], STDOUT_FILENO);
+
+				/* execute the command in the child process */
+				exe_err = execvp(former_args[0], former_args); 
+
+				if (exe_err < 0) printf("The former command is not executable.\n");
+
+				/* close the write end of the pipe */
+				close(pipe_fd[WRITE_END]);
+			}
+			else { /* parent process */
+				wait(NULL);
+
+				/* close the unused end of the pipe */
+				close(pipe_fd[WRITE_END]);
+
+				dup2(pipe_fd[READ_END], STDIN_FILENO);
+
+				print_args(latter_args);
+
+				exe_err = execvp(latter_args[0], latter_args);
+
+				if (exe_err < 0) printf("The latter command is not executable.\n");
+
+				close(pipe_fd[READ_END]);
+			}
+		}
 
 		// close(fd);
 	}
 	else { /* parent process */
-		if (wait_flag) wait(NULL);
+		if (wait_flag) wait(NULL); /* the parent process will wait if the wait flag is set */
 	}
 }
 
@@ -121,11 +211,14 @@ int main(void)
 	int should_run = 1;
 	char cmd[MAX_LINE];
 	char cmd_history[MAX_LINE]; /* history buffer */
-	int wait_flag;
-	int split_pos;
+	int wait_flag; /* flag indicating whether the proecesses are concurrently executed */
+	int split_pos; /* position where 'args' is separated by '|' */
 
 	char ifile[20];
 	char ofile[20];
+
+	char *former_args[MAX_LINE/2 + 1];
+	char *latter_args[MAX_LINE/2 + 1];
 
 	for (int i = 0; i < MAX_LINE/2 + 1; ++i) args[i] = NULL;
 	cmd_history[0] = '\0';
@@ -165,14 +258,17 @@ int main(void)
 
 		wait_flag = parse_cmd(cmd, args, ifile, ofile, &split_pos);
 
-		printf("Input file: %s; output file: %s\n", ifile, ofile);
+		printf("Input file: %s\nOutput file: %s\n", ifile, ofile);
 
 		printf("Split position: %d\n", split_pos);
 
+		// if (get_latter_args(args, split_pos, latter_args) == 0) {
+		// 	print_args(latter_args);
+		// }
+
 		exe(args, wait_flag, ifile, ofile, split_pos);
 
-
-		// clear values
+		/* clear values */
 		for (int i = 0; i < MAX_LINE/2 + 1; ++i) 
 		{	
 			free(args[i]);
