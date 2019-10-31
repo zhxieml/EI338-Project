@@ -1,0 +1,11 @@
+simple_shell.c
+a
+b
+s
+we
+c
+d
+b
+b
+bb
+
