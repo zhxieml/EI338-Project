@@ -1,0 +1,1 @@
+cmd_/home/fffffarmer/Documents/EI338_Project/hw2/ch3/task.ko := ld -r -m elf_x86_64 -z max-page-size=0x200000 -T ./scripts/module-common.lds --build-id  -o /home/fffffarmer/Documents/EI338_Project/hw2/ch3/task.ko /home/fffffarmer/Documents/EI338_Project/hw2/ch3/task.o /home/fffffarmer/Documents/EI338_Project/hw2/ch3/task.mod.o ;  true
