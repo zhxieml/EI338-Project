@@ -181,7 +181,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 				close(pipe_fd[WRITE_END]);
 			}
 			else { /* parent process */
-				wait(NULL);
+				waitpid(pid, NULL, 0);
 
 				/* close the unused end of the pipe */
 				close(pipe_fd[WRITE_END]);
@@ -197,11 +197,9 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 				close(pipe_fd[READ_END]);
 			}
 		}
-
-		// close(fd);
 	}
 	else { /* parent process */
-		if (wait_flag) wait(NULL); /* the parent process will wait if the wait flag is set */
+		if (wait_flag) waitpid(pid, NULL, 0); /* the parent process will wait if the wait flag is set */
 	}
 }
 
@@ -239,7 +237,7 @@ int main(void)
 		 * After reading user input, the steps are:
 		 * (1) fork a child process
 		 * (2) the child process will invoke execvp()
-		 * (3) if command included &, parent will invoke wait()
+		 * (3) if command included &, parent will invoke waitpid()
 		 */
 
 	    /* present the prompt repeated */
@@ -278,6 +276,8 @@ int main(void)
 		}
 		ifile[0] = '\0';
 		ofile[0] = '\0';
+
+		split_pos = wait_flag = 0;
 	}
     
 	return 0;
