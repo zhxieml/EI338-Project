@@ -1,0 +1,17 @@
+a.out
+.cache.mk
+.gitignore
+.gitignore.swp
+Makefile
+proc_pid.c
+.proc_pid.ko.cmd
+.proc_pid.mod.o.cmd
+.proc_pid.o.cmd
+simple-shell.c
+sort.txt
+.task.ko.cmd
+.task.mod.o.cmd
+.task.o.cmd
+text.txt
+.tmp_versions
+.vscode
