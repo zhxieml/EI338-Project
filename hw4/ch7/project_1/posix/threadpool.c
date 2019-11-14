@@ -9,18 +9,6 @@
 #include <fcntl.h>
 #include "threadpool.h"
 
-#define QUEUE_SIZE 50
-#define NUMBER_OF_THREADS 3
-
-#define TRUE 1
-
-// this represents work that has to be 
-// completed by a thread in the pool
-typedef struct {
-    void (*function)(void *p);
-    void *data;
-} task;
-
 // the work queue
 task worktodos[QUEUE_SIZE];
 int total;
