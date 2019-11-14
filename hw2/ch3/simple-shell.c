@@ -148,6 +148,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 			char *latter_args[MAX_LINE/2 + 1];
 			pid_t pipe_pid;
 
+			/* get the commands */
 			if (get_former_args(args, split_pos, former_args) != 0 || get_latter_args(args, split_pos, latter_args) != 0) {
 				printf("Error occurs when separating the command.\n");
 				return 1;
@@ -229,7 +230,7 @@ int main(void)
 		printf("osh>");
 		fflush(stdout);
 
-	    /* present the prompt repeated */
+	    /* read the user input */
 		fgets(cmd, MAX_LINE, stdin);
 		cmd[strlen(cmd) - 1] = '\0'; /* delete line-feed */
 
@@ -240,7 +241,7 @@ int main(void)
 		 * (3) if command included &, parent will invoke waitpid()
 		 */
 
-	    /* present the prompt repeated */
+	    /* deal with the history command as a special case */
 		if (!strcmp(cmd, "!!")) {
 			if (strlen(cmd_history) == 0) 
 			{

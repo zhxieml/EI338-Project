@@ -31,8 +31,8 @@ static struct file_operations proc_ops = {
 /* This function is called when the module is loaded. */
 static int proc_init(void)
 {
-    // creates the /proc/pid entry
-    // the right is also set
+    /** creates the /proc/pid entry
+        the right is also set **/
     proc_create(PROC_NAME, 0666, NULL, &proc_ops);
 
     printk(KERN_INFO "/proc/%s created\n", PROC_NAME);
@@ -43,7 +43,7 @@ static int proc_init(void)
 /* This function is called when the module is removed. */
 static void proc_exit(void) 
 {
-    // removes the /proc/procfs entry
+    /* removes the /proc/procfs entry */
     remove_proc_entry(PROC_NAME, NULL);
 
     printk(KERN_INFO "/proc/%s removed\n", PROC_NAME);
@@ -79,13 +79,13 @@ static ssize_t proc_read(struct file *file, char __user *usr_buf, size_t count, 
         return 0;
     }
 
-    // copies the contents of kernel buffer to userspace usr_buf 
+    /* copies the contents of kernel buffer to userspace usr_buf */ 
     if (copy_to_user(usr_buf, buffer, len)) {
         printk(KERN_INFO "Error occurs when copying from user\n");
         return -1;
     }
 
-    // updates the position and returns the number of bytes we received
+    /* updates the position and returns the number of bytes we received */
 	*pos = len;
 	return len;
 }
@@ -98,10 +98,10 @@ static ssize_t proc_write(struct file *file, const char __user *usr_buf, size_t 
     char *k_mem;
     long pid;
 
-    // allocates kernel memory
+    /* allocates kernel memory */
     k_mem = kmalloc(count + 1, GFP_KERNEL);
 
-    // copies user space usr_buf to kernel buffer
+    /* copies user space usr_buf to kernel buffer */
     if (copy_from_user(k_mem, usr_buf, count)) {
         printk(KERN_INFO "Error occurs when copying from user\n");
         return -1;
@@ -109,11 +109,11 @@ static ssize_t proc_write(struct file *file, const char __user *usr_buf, size_t 
 
     k_mem[count] = '\0';
 
-    // optains the long integet
+    /* obtains the long integer */
     kstrtol(k_mem, 10, &pid);
     current_pid = (int) pid;
 
-    // return kernel memory
+    /* return kernel memory */
     kfree(k_mem);
 
     return count;
