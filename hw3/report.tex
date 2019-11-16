@@ -1,0 +1,87 @@
+% !TEX program = Xelatex
+\documentclass{article}
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+\usepackage{epsfig,graphicx,subfigure}
+\usepackage{enumitem,balance,mathtools}
+\usepackage{wrapfig}
+\usepackage{mathrsfs, euscript}
+\usepackage{hyperref}
+\usepackage{listings}
+% \usepackage[ruled,lined,boxed,linesnumbered]{algorithm2e}
+\usepackage[ruled]{algorithm2e}
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily,
+    showstringspaces=false,
+    commentstyle=\it\color[RGB]{0,96,96},
+    keywordstyle=\color[RGB]{40,40,255},
+    frame=lines,
+    captionpos=b
+}
+
+% \hypersetup{hidelinks}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{exercise}{Exercise}[section]
+\newtheorem*{solution}{Solution}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\newcommand{\postscript}[2]
+    {\setlength{\epsfxsize}{#2\hsize}
+    \centerline{\epsfbox{#1}}}
+\renewcommand{\baselinestretch}{1.0}
+
+\setlength{\oddsidemargin}{-0.365in}
+\setlength{\evensidemargin}{-0.365in}
+\setlength{\topmargin}{-0.3in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9.1in}
+\setlength{\textwidth}{7in}
+
+% ------ adjust it according to the specific circumstances ----- %
+\title{EI338 Computer Systems Engineering}
+\author{Project 4}
+% \date{}
+% ---------------------------------------------------------------%
+
+\begin{document}
+
+\maketitle
+
+% ------------------ your name and number ----------------- %
+\begin{center}
+    Zhihui Xie, 517030910356
+\end{center}
+
+% --------------------------------------------------------- %
+The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
+
+\section*{Exercise}
+In this exercise, we will implement several different process scheduling algorithms. The scheduler will be assigned a predefined set of tasks and will
+schedule the tasks based on the selected scheduling algorithm. Each task is
+assigned a priority and CPU burst. The following scheduling algorithms will
+be implemented:
+
+\begin{itemize}
+    \item \textbf{First-come, first-served (FCFS)}, which schedulestasksintheorderinwhich
+    they request the CPU.
+
+    \item \textbf{Shortest-job-first (SJF)}, which schedules tasks in order of the length of the
+    tasks’ next CPU burst.
+
+    \item \textbf{Priority scheduling}, which schedules tasks based on priority.
+    
+    \item \textbf{Round-robin (RR) scheduling}, where each task is run for a time quantum
+    (or for the remainder of its CPU burst).
+
+    \item \textbf{Priority with round-robin}, which schedules tasks in order of priority and
+    uses round-robin scheduling for tasks with equal priority.
+\end{itemize}
+
+
+\end{document}
