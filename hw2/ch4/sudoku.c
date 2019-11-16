@@ -26,7 +26,7 @@ int main() {
     int res = 1;
     
     /*load the sudoku girds */
-	for(int i=0; i<81; i++) {
+	for (int i = 0; i < 81; ++i) {
 		fscanf(fp, "%d", &grids[i/9][i%9]);
 	}
 
@@ -44,7 +44,7 @@ int main() {
         /* create the thread */
         pthread_create(&tids[0][i], &attrs[0][i], runner, &data[0][i]);
 
-        /*wait for the thread to exit */
+        /* wait for the thread to exit */
         pthread_join(tids[0][i], NULL);
     }
 
@@ -60,7 +60,7 @@ int main() {
         /* create the thread */
         pthread_create(&tids[1][i], &attrs[1][i], runner, &data[1][i]);
 
-        /*wait for the thread to exit */
+        /* wait for the thread to exit */
         pthread_join(tids[1][i], NULL);
     }
 
@@ -76,7 +76,7 @@ int main() {
         /* create the thread */
         pthread_create(&tids[2][i], &attrs[2][i], runner, &data[2][i]);
 
-        /*wait for the thread to exit */
+        /* wait for the thread to exit */
         pthread_join(tids[2][i], NULL);
     }
 

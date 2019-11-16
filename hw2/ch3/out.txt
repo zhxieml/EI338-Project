@@ -1,0 +1,14 @@
+a.out
+Makefile
+modules.order
+Module.symvers
+out.tx	
+out.txt
+proc_pid.c
+proc_pid.ko
+proc_pid.mod.c
+proc_pid.mod.o
+proc_pid.o
+simple-shell.c
+sort.txt
+text.txt
