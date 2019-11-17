@@ -1,0 +1,392 @@
+% !TEX program = Xelatex
+\documentclass{article}
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+\usepackage{epsfig,graphicx,subfigure}
+\usepackage{enumitem,balance,mathtools}
+\usepackage{wrapfig}
+\usepackage{mathrsfs, euscript}
+\usepackage{hyperref}
+\usepackage{listings}
+% \usepackage[ruled,lined,boxed,linesnumbered]{algorithm2e}
+\usepackage[ruled]{algorithm2e}
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily,
+    showstringspaces=false,
+    commentstyle=\it\color[RGB]{0,96,96},
+    keywordstyle=\color[RGB]{40,40,255},
+    frame=lines,
+    captionpos=b
+}
+
+% \hypersetup{hidelinks}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{exercise}{Exercise}[section]
+\newtheorem*{solution}{Solution}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\newcommand{\postscript}[2]
+    {\setlength{\epsfxsize}{#2\hsize}
+    \centerline{\epsfbox{#1}}}
+\renewcommand{\baselinestretch}{1.0}
+
+\setlength{\oddsidemargin}{-0.365in}
+\setlength{\evensidemargin}{-0.365in}
+\setlength{\topmargin}{-0.3in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9.1in}
+\setlength{\textwidth}{7in}
+
+% ------ adjust it according to the specific circumstances ----- %
+\title{EI338 Computer Systems Engineering}
+\author{Project 5}
+% \date{}
+% ---------------------------------------------------------------%
+
+\begin{document}
+
+\maketitle
+
+% ------------------ your name and number ----------------- %
+\begin{center}
+    Zhihui Xie, 517030910356
+\end{center}
+
+% --------------------------------------------------------- %
+The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
+
+\section*{Exercise I}
+In this exercise, we will design a thread pool. When thread pools are used, a
+task is submitted to the pool and executed by a thread from the pool. Work is
+submitted to the pool using a queue, and an available thread removes work
+from the queue. If there are no available threads, the work remains queued
+until one becomes available. If there is no work, threads await notification until
+a task becomes available.
+
+We implement the thread pool in C. For thread management, we use the execution model \textbf{POSIX Threads (Pthreads)}.
+
+\subsection*{Basic Structure}
+Put aside details in the client program, the implement of the thread pool involves the following activities:
+
+\begin{itemize}
+    \item The \textit{pool\_init()} function will create the threads at startup as well as initialize mutual-exclusion locks and semaphores.
+    \item The \textit{pool\_submit()} function is partially implemented and currently
+    places the function to be executed—as well as its data— into a task
+    struct.
+    \item The \textit{worker()} function is executed by each thread in the pool, where each
+    thread will wait for available work.
+    \item The \textit{pool\_shutdown()} function will cancel each worker thread and then
+    wait for each thread to terminate by calling \textit{pthread\_join()} .
+\end{itemize}
+
+Besides, functions \textit{enqueue()} and \textit{dequeue()} are also needed to complete for managing the queue. 
+
+\subsection*{Implementation} 
+\subsubsection*{enqueue() \& dequeue()}
+The queue for the pool is realized as a circular queue. We use a mutex for synchronization.
+
+\begin{lstlisting}[language=c, caption={enqueue() \& dequeue()}]
+// insert a task into the queue
+// returns 0 if successful or 1 otherwise, 
+int enqueue(task t) {
+    pthread_mutex_lock(&mutex);
+
+    if ((rear + 1) % QUEUE_SIZE == front) {
+        pthread_mutex_unlock(&mutex);
+
+        return 1;
+    }
+    
+    worktodos[rear] = t;
+    rear = (rear + 1) % QUEUE_SIZE;
+
+    pthread_mutex_unlock(&mutex);
+
+    return 0; 
+}
+
+// remove a task from the queue
+task *dequeue() {
+    pthread_mutex_lock(&mutex);
+
+    task *task_tmp;
+
+    if (front == rear) {
+        pthread_mutex_unlock(&mutex);
+
+        return NULL;
+    }
+
+    task_tmp = &worktodos[front];
+    front = (front + 1) % QUEUE_SIZE;
+
+    pthread_mutex_unlock(&mutex);
+    return task_tmp;
+}
+\end{lstlisting}
+
+\subsubsection*{worker()} \textit{worker()} is assigned to each thread and each thread will wait for available work. A semaphore is used to suggest whether there exists available work.
+
+\begin{lstlisting}[language=c, caption={worker()}]
+void *worker(void *param) {
+    task *todo;
+
+    // execute the task
+    while(TRUE) {
+        sem_wait(&sem);
+
+        todo = dequeue();
+
+        execute(todo->function, todo->data);
+    }
+}
+\end{lstlisting}
+
+\subsubsection*{pool\_submit()} When a function as well as its data packed in a struct `task' is submitted to the thread pool, the task will be enqueued and the semaphore' signal function will be called.
+
+\begin{lstlisting}[language=c, caption={pool\_submit()}]
+int pool_submit(void (*somefunction)(void *p), void *p) {
+    task todo;
+    int flag;
+
+    todo.function = somefunction;
+    todo.data = p;
+    
+    // add the task to the queue
+    flag = enqueue(todo);
+
+    if (flag) 
+        return 1;
+
+    sem_post(&sem);
+    return 0;
+}
+\end{lstlisting}
+
+\subsubsection*{pool\_init()} 
+First of all, we of course need to ensure that the pool is not empty by creating some threads. Mutex locks and semaphores are also initialized here for further usage.
+
+\begin{lstlisting}[language=c, caption={pool\_init()}]
+void pool_init(void) {
+    // create the threads at startup
+    for (int i = 0; i < NUMBER_OF_THREADS; ++i) {
+        pthread_create(&bees[i], NULL, worker, NULL);
+    }
+
+    // initialize the queue
+    front = rear = 0;
+    
+    // initialize mutual-exclusion locks and semaphores
+    sem_init(&sem, 0, 0);
+    pthread_mutex_init(&mutex, NULL);
+}
+\end{lstlisting}
+
+\subsubsection*{pool\_cancel()}
+By calling \textit{pool\_cancel()}, we terminate threads so that everthing goes back to the main thread.
+
+\begin{lstlisting}[language=c, caption={pool\_cancel()}]
+void pool_shutdown(void) {
+    // cancel each worker thread and wait for each thread to terminate
+    for (int i = 0; i < NUMBER_OF_THREADS; ++i) {
+        pthread_cancel(bees[i]);
+        pthread_join(bees[i], NULL);
+    }
+}
+\end{lstlisting}
+
+\subsection*{Result}
+To test whether our program is correct, we design the client as follows (\textit{void add(void *param)} and \textit{void subtract(void *param)} are simple functions doing easy calculation.):
+
+\begin{lstlisting}[language=c, caption={client.c}]
+int main(void) {
+    int sleep_time;
+
+    // create some work to do
+    struct data work;
+    work.a = 5;
+    work.b = 10;
+
+    // initialize the thread pool
+    pool_init();
+
+    // submit the works to the queue
+    for (int i = 0; i < 10; ++i) {
+        pool_submit(&add, &work);
+        pool_submit(&subtract, &work);
+    }
+
+    // may be helpful 
+    sleep_time = 1;
+    printf("Sleep time: %d\n", sleep_time);
+    sleep(sleep_time);
+
+    pool_shutdown();
+
+    return 0;
+}
+\end{lstlisting}
+
+And experimental results go like this:
+
+\begin{figure}[h]
+    \centering
+    
+    \includegraphics[width=12cm]{img/pool}
+    \caption{The Thread Pool Test}
+    \label{}
+\end{figure}
+
+\section*{Exercise II}
+This time, we are going to design a programming solution to the bounded-buffer problem using the producer and consumer processes.
+
+We use standard counting semaphores
+for \textbf{empty} and \textbf{full} and a mutex lock, rather than a binary semaphore, to
+represent mutex. The problem is solved using \textbf{Pthreads}.
+
+\subsection*{Basic Structure}
+There are mainly two aspects to be consider: the buffer and the producer \& consumer threads.
+
+\paragraph{\textbf{The Buffer}}
+Internally, the buffer will consist of a fixed-size array of type buffer item
+(which will be defined using a \textit{typedef}). The array of buffer item objects
+will be manipulated as a circular queue. The buffer will be manipulated with two functions, \textit{insert\_item()} and
+\textit{remove\_item()}, which are called by the producer and consumer threads,
+respectively. 
+
+\paragraph{\textbf{The Producer \& Consumer Threads}}
+The producer thread will alternate between sleeping for a random period of
+time and inserting a random integer into the buffer. Random numbers will
+be produced using the \textit{rand()} function, which produces random integers
+between 0 and \textit{RAND\_MAX}. The consumer will also sleep for a random period
+of time and, upon awakening, will attempt to remove an item from the buffer.
+
+\subsection*{Implementation}
+\subsubsection*{The Buffer}
+The buffer is implemented as a circular queue. It will be initialized with \textit{buffer\_init()}, and then manipulated with \textit{insert\_item()} and \textit{remove\_item()}.
+
+\paragraph{\textbf{buffer\_init()}} At the beginning, the circular queue is empty. The mutex lock and two semaphores are also initialized here.
+
+\begin{lstlisting}[language=c, caption={buffer\_init()}]
+void buffer_init() {
+    front = rear = 0;
+
+    // initialize mutual-exclusion locks and semaphores
+    sem_init(&full, 0, 0);
+    sem_init(&empty, 0, BUFFER_SIZE);
+
+    pthread_mutex_init(&mutex, NULL);
+
+    printf("buffer initialized\n");
+}
+\end{lstlisting}
+
+\paragraph{insert\_item() \& remove\_item()} Every time before we insert an item into the buffer, we need to synchronize both the mutex lock \textbf{mutex} and the semaphore \textbf{empty}. And after exiting the critical section, we call \textit{pthread\_mutex\_unlock()} as well as \textit{sem\_post()}. \textit{remove\_item()} is very much the same.
+
+\begin{lstlisting}[language=c]
+int insert_item(buffer_item item) {
+    sem_wait(&empty);
+    pthread_mutex_lock(&mutex);
+
+    if ((rear + 1) % BUFFER_SIZE == front) {        
+        pthread_mutex_unlock(&mutex);
+
+        // return -1 indicating an error condition 
+        return -1;
+    }
+
+    buffer[rear] = item;
+    rear = (rear + 1) % BUFFER_SIZE;
+
+    pthread_mutex_unlock(&mutex);
+    sem_post(&full);
+
+    // return 0 if successful, otherwise
+    return 0;
+}
+
+int remove_item(buffer_item *item) {
+    sem_wait(&full);
+    pthread_mutex_lock(&mutex);
+
+    if (front == rear) {
+        pthread_mutex_unlock(&mutex);
+
+        // return -1 indicating an error condition
+        return -1;
+    }
+
+    // place it in item
+    *item = buffer[front];
+
+    front = (front + 1) % BUFFER_SIZE;
+    
+    pthread_mutex_unlock(&mutex);
+    sem_post(&empty);
+
+    // return 0 if successful, otherwise
+    return 0;
+}
+\end{lstlisting}
+
+\subsubsection*{The Producer \& Consumer Threads}
+These threads are assigned with tasks \textit{producer()} and \textit{consumer()}, which is implemented as follows:
+
+\paragraph{\textbf{producer()}} 
+The producer thread will alternate between sleeping for a random period of
+time and inserting a random integer into the buffer. To avoid it from sleeping too much, we set the maximal sleeping time as 2s.
+
+\begin{lstlisting}[language=c, caption={producer()}]
+void *producer(void *param) {
+    buffer_item item;
+
+    while (TRUE) {
+        // sleep for a random period of time
+        sleep(rand() % MAX_SLEEP_TIME);
+
+        // generate a random number
+        item = rand();
+
+        if (insert_item(item))
+            fprintf(stderr, "producer produced error");
+        else
+            printf("producer produced %d\n",item);
+    }
+}    
+\end{lstlisting}
+
+\paragraph{\textbf{consumer()}} \textit{consumer()} is very similar to \textit{consumer()}.
+
+\begin{lstlisting}[language=c, caption={consumer()}]
+void *consumer(void *param) {
+    buffer_item item;
+
+    while (TRUE) {
+        // sleep for a random period of time
+        sleep(rand() % MAX_SLEEP_TIME);
+
+        if (remove_item(&item))
+            fprintf(stderr, "consumer consumed error");
+        else
+            printf("consumer consumed %d\n",item);
+    }
+}
+\end{lstlisting}
+
+\subsection*{Result}
+We set the sleeping time for \textit{main()} to wait as 5s, and use 2 producer threads as well as 3 consuemr threads. The experimental result is presented below.
+
+\begin{figure}[h]
+    \centering
+    
+    \includegraphics[width=12cm]{img/pro_con}
+    \caption{The Procuder-Consumer Problem Test}
+    \label{}
+\end{figure}
+\end{document}

@@ -1,0 +1,381 @@
+% !TEX program = Xelatex
+\documentclass{article}
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+\usepackage{epsfig,graphicx,subfigure}
+\usepackage{enumitem,balance,mathtools}
+\usepackage{wrapfig}
+\usepackage{mathrsfs, euscript}
+\usepackage{hyperref}
+\usepackage{listings}
+% \usepackage[ruled,lined,boxed,linesnumbered]{algorithm2e}
+\usepackage[ruled]{algorithm2e}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{minibox}
+
+\lstset{
+    basicstyle=\ttfamily,
+    showstringspaces=false,
+    commentstyle=\it\color[RGB]{0,96,96},
+    keywordstyle=\color[RGB]{40,40,255},
+    frame=lines,
+    captionpos=b
+}
+
+% \hypersetup{hidelinks}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{exercise}{Exercise}[section]
+\newtheorem*{solution}{Solution}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\newcommand{\postscript}[2]
+    {\setlength{\epsfxsize}{#2\hsize}
+    \centerline{\epsfbox{#1}}}
+\renewcommand{\baselinestretch}{1.0}
+
+\setlength{\oddsidemargin}{-0.365in}
+\setlength{\evensidemargin}{-0.365in}
+\setlength{\topmargin}{-0.3in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9.1in}
+\setlength{\textwidth}{7in}
+
+% ------ adjust it according to the specific circumstances ----- %
+\title{EI338 Computer Systems Engineering}
+\author{Project 4}
+% \date{}
+% ---------------------------------------------------------------%
+
+\begin{document}
+
+\maketitle
+
+% ------------------ your name and number ----------------- %
+\begin{center}
+    Zhihui Xie, 517030910356
+\end{center}
+
+% --------------------------------------------------------- %
+The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
+
+\section*{Exercise}
+In this exercise, we will implement several different process scheduling algorithms. The scheduler will be assigned a predefined set of tasks and will
+schedule the tasks based on the selected scheduling algorithm. Each task is
+assigned a priority and CPU burst. The following scheduling algorithms will
+be implemented:
+
+\begin{itemize}
+    \item \textbf{First-come, first-served (FCFS)}, which schedulestasksintheorderinwhich
+    they request the CPU.
+
+    \item \textbf{Shortest-job-first (SJF)}, which schedules tasks in order of the length of the
+    tasks’ next CPU burst.
+
+    \item \textbf{Priority scheduling}, which schedules tasks based on priority.
+    
+    \item \textbf{Round-robin (RR) scheduling}, where each task is run for a time quantum
+    (or for the remainder of its CPU burst).
+
+    \item \textbf{Priority with round-robin}, which schedules tasks in order of priority and
+    uses round-robin scheduling for tasks with equal priority.
+\end{itemize}
+
+\subsection*{Basic Structure}
+To organize the list of tasks,  our approach is to place all tasks in a single unordered list, where the strategy for task selection depends on the scheduling
+algorithm. 
+
+There are mainly two functions needed implemented: 
+\begin{itemize}
+    \item \textit{add()}, which realizes how to add a task into the list. The implementation is basically the same among these algorithms.
+    \item \textit{schedule()}, which will invoke the scheduler and schedule the tasks in some order depending on the type of schedule algorithm.
+\end{itemize}
+
+\subsection*{Implementation}
+\subsubsection*{add()}
+For algorithms except for \textbf{Priority with round-robin}, we only need to call the funcion \textit{insert()} to add the task into the link list.
+
+\begin{lstlisting}[language=c,caption={add()}]
+static struct node *head = NULL;
+static int t_num = 0;
+
+void add(char *name, int priority, int burst) {
+    Task *t = malloc(sizeof(Task));
+    t->name = malloc(strlen(name) + 1);
+
+    strcpy(t->name, name);
+    t->priority = priority;
+    t->burst = burst;
+    t->tid = t_num;
+    ++t_num;
+
+    insert(&head, t);
+}
+\end{lstlisting}
+
+But for \textbf{Priority with round-robin}, the implementation is slightly differnet. To separate tasks into different priority, we maintain a global array to assign tasks into different link lists. 
+
+\begin{lstlisting}[language=c, caption={add() for priority with round-robin}]
+static int t_num = 0;
+static int priority_max = INT_MIN;
+static struct node *heads[SIZE];
+
+void add(char *name, int priority, int burst) {
+    Task *t = malloc(sizeof(Task));
+    t->name = malloc(strlen(name) + 1);
+
+    strcpy(t->name, name);
+    t->priority = priority;
+    t->burst = burst;
+    t->tid = t_num;
+    ++t_num;
+
+    // update the maximal priority
+    priority_max = max(priority, priority_max);
+
+    insert(&heads[priority], t);
+}
+\end{lstlisting}
+
+\subsubsection*{schedule()}
+All 5 algorithms will be discussed here:
+
+\begin{itemize}
+    \item \textbf{First-come, first-served (FCFS)}. Due to the fact that all tasks arrive at the same time, FCFS will simply do nothing but run tasks in orginal order.
+    
+    \begin{lstlisting}[language=c, caption={schedule() for FCFS}]
+void schedule() {
+    struct node *tmp;
+
+    while (t_num > 0) {
+        tmp = head;
+
+        // find the first-order task
+        while (tmp->next != NULL) {
+            tmp = tmp->next;
+        }
+
+        run(tmp->task, tmp->task->burst);
+        delete(&head, tmp->task);
+        --t_num;
+    }
+}
+    \end{lstlisting}
+
+    \item \textbf{Shortest-job-first (SJF)}. SJF will schedule the task with shortest CPU burst first. Hence, for every run we traverse the link list and find the shortest job.
+    
+    \begin{lstlisting}[language=c, caption={schedule() for SJF}]
+void schedule() {
+    struct node *tmp;
+    Task *shortest_burst_t;
+    int shortest_burst;
+
+    while (t_num > 0) {
+        tmp = head;
+        shortest_burst = INT_MAX;
+
+        // find the task with shortest burst
+        while (tmp != NULL) {
+            if (tmp->task->burst < shortest_burst) {
+                shortest_burst = tmp->task->burst;
+                shortest_burst_t = tmp->task;
+            }
+            
+            tmp = tmp->next;
+        }
+
+        run(shortest_burst_t, shortest_burst);
+        delete(&head, shortest_burst_t);
+        --t_num;
+    }
+}
+    \end{lstlisting}
+
+    \item \textbf{Priority scheduling}. Priority scheduling is the general case of SJF, so the implementation is almost the same but for scheduling tasks with higher priority first.
+    
+    \begin{lstlisting}[language=c, caption={schedule() for Priority scheduling}]
+void schedule() {
+    struct node *tmp;
+    Task *highest_t;
+    int highest;
+
+    while (t_num > 0) {
+        tmp = head;
+        highest = INT_MIN;
+
+        // find the task with highest priority
+        while (tmp != NULL) {
+            if (tmp->task->priority > highest) {
+                highest = tmp->task->priority;
+                highest_t = tmp->task;
+            }
+            
+            tmp = tmp->next;
+        }
+
+        run(highest_t, highest);
+        delete(&head, highest_t);
+        --t_num;
+    }
+}
+    \end{lstlisting}
+    
+    \item \textbf{Round-robin (RR) scheduling}. Every time we let a task run for 10 ms (defined by QUANTUM) or a shorter period of time if its remaining CPU burst is less than 10ms. Once it runs, it will be put in the end of queue, which is realized by finding the next task adjacent to it.
+    
+    \begin{lstlisting}[language=c, caption={schedule() for RR}]
+void schedule() {
+    struct node *tmp = head;
+    struct node *nextTmp;
+    int run_time;
+    
+    // go to front
+    while (tmp->next != NULL) {
+        tmp = tmp->next;
+    }
+
+    while (t_num > 0) {
+        // run
+        run_time = min(QUANTUM, tmp->task->burst);
+        run(tmp->task, run_time);
+
+        // find the next task to run
+        nextTmp = head;
+
+        if (tmp == head) {
+            while (nextTmp->next != NULL) {
+                nextTmp = nextTmp->next;
+            }
+        }
+        else {
+            while (nextTmp->next != tmp)
+            {
+                nextTmp = nextTmp->next;
+            }            
+        }
+
+        // check if the task needs to be deleted
+        if (tmp->task->burst == run_time) {           
+            delete(&head, tmp->task);
+            --t_num;
+        }
+        else {
+            tmp->task->burst -= run_time;
+        }
+
+        // assign next task
+        tmp = nextTmp;
+    }
+}
+    \end{lstlisting}
+
+    \item \textbf{Priority with round-robin}. This time, we use several queue instead of one. Since tasks with higher priority will run before those with lower priority, we start from highest priority, run out all the tasks and then go to lower priority. For tasks in the same queue, the schedule method is exactly RR.
+    
+    \begin{lstlisting}[language=c, caption={schedule() for Priority with round-robin}]
+void schedule() {
+    int current_head = priority_max;
+    int run_time;
+    struct node *tmp, *nextTmp;
+
+    while (t_num > 0) {
+        tmp = heads[current_head];
+
+        // go to front
+        while (tmp->next != NULL) {
+            tmp = tmp->next;
+        }
+
+        while (tmp != NULL) {
+            // run
+            run_time = min(QUANTUM, tmp->task->burst);
+            run(tmp->task, run_time);
+
+            // find the next task to run
+            nextTmp = heads[current_head];
+
+            if (tmp == heads[current_head]) {
+                while (nextTmp->next != NULL) {
+                    nextTmp = nextTmp->next;
+                }
+            }
+            else {
+                while (nextTmp->next != tmp)
+                {
+                    nextTmp = nextTmp->next;
+                }            
+            }
+
+            // check if the task needs to be deleted
+            if (tmp->task->burst == run_time) {           
+                delete(&heads[current_head], tmp->task);
+                --t_num;
+            }
+            else {
+                tmp->task->burst -= run_time;
+            }
+
+            // assign next task
+            if (heads[current_head] == NULL) {
+                tmp = NULL;
+            }
+            else {
+                tmp = nextTmp;
+            }
+        }
+
+        // go to lower priority
+        while (tmp == NULL)
+        {
+            --current_head;
+            tmp = heads[current_head];
+        }
+    }
+}
+    \end{lstlisting}
+\end{itemize}
+
+\subsection*{Result}
+Data for testing is as following:
+
+\begin{center}
+    \minibox[frame]{T1, 4, 20\\
+    T2, 3, 25\\
+    T3, 3, 25\\
+    T4, 5, 15\\
+    T5, 5, 20\\
+    T6, 1, 10\\
+    T7, 3, 30\\
+    T8, 10, 25
+    }
+\end{center}
+
+And experimental results for different algorithms look like:
+
+\begin{figure}[h]
+    \centering
+    
+    \includegraphics[width=12cm]{img/schedule_1}
+    \caption{Result 1}
+    \label{}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+
+    \includegraphics[width=12cm]{img/schedule_2}
+    \caption{Result 2}
+    \label{}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+
+    \includegraphics[width=12cm]{img/schedule_3}
+    \caption{Result 3}
+    \label{}
+\end{figure}
+
+\end{document}
