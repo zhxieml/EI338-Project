@@ -26,7 +26,7 @@ int main() {
 
     int m = 5;
 
-    /*load the sudoku girds */
+    /*load the data */
 	for (int i = 0; i < 10; ++i) {
 		fscanf(fp, "%d", &data[i]);
 	}

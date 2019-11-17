@@ -45,7 +45,7 @@
 
 % ------ adjust it according to the specific circumstances ----- %
 \title{EI338 Computer Systems Engineering}
-\author{Project 1}
+\author{Project 4}
 % \date{}
 % ---------------------------------------------------------------%
 
@@ -61,5 +61,27 @@
 % --------------------------------------------------------- %
 The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
 
+\section*{Exercise}
+In this exercise, we will implement several different process scheduling algorithms. The scheduler will be assigned a predefined set of tasks and will
+schedule the tasks based on the selected scheduling algorithm. Each task is
+assigned a priority and CPU burst. The following scheduling algorithms will
+be implemented:
 
-\end{document}\grid
+\begin{itemize}
+    \item \textbf{First-come, first-served (FCFS)}, which schedulestasksintheorderinwhich
+    they request the CPU.
+
+    \item \textbf{Shortest-job-first (SJF)}, which schedules tasks in order of the length of the
+    tasks’ next CPU burst.
+
+    \item \textbf{Priority scheduling}, which schedules tasks based on priority.
+    
+    \item \textbf{Round-robin (RR) scheduling}, where each task is run for a time quantum
+    (or for the remainder of its CPU burst).
+
+    \item \textbf{Priority with round-robin}, which schedules tasks in order of priority and
+    uses round-robin scheduling for tasks with equal priority.
+\end{itemize}
+
+
+\end{document}

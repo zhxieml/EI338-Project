@@ -137,7 +137,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 			dup2(fd, STDOUT_FILENO);
 		}
 
-		if (split_pos == 0) {
+		if (split_pos == 0) { /* no pipe */
 			/* execute the command in the child process */
 			exe_err = execvp(args[0], args); 
 
@@ -148,6 +148,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 			char *latter_args[MAX_LINE/2 + 1];
 			pid_t pipe_pid;
 
+			/* get the commands */
 			if (get_former_args(args, split_pos, former_args) != 0 || get_latter_args(args, split_pos, latter_args) != 0) {
 				printf("Error occurs when separating the command.\n");
 				return 1;
@@ -205,6 +206,7 @@ int exe(char **args, int wait_flag, char *ifile, char *ofile, int split_pos) {
 
 int main(void)
 {
+	/* some initializations */
 	char *args[MAX_LINE/2 + 1];	/* command line (of 80) has max of 40 arguments */
 	int should_run = 1;
 	char cmd[MAX_LINE];
@@ -223,10 +225,12 @@ int main(void)
 	ifile[0] = '\0';
 	ofile[0] = '\0';
 	
+    /* present the prompt repeated */
 	while (should_run) {   
 		printf("osh>");
 		fflush(stdout);
 
+	    /* read the user input */
 		fgets(cmd, MAX_LINE, stdin);
 		cmd[strlen(cmd) - 1] = '\0'; /* delete line-feed */
 
@@ -237,6 +241,7 @@ int main(void)
 		 * (3) if command included &, parent will invoke waitpid()
 		 */
 
+	    /* deal with the history command as a special case */
 		if (!strcmp(cmd, "!!")) {
 			if (strlen(cmd_history) == 0) 
 			{
@@ -254,16 +259,14 @@ int main(void)
 		}	
 		else strcpy(cmd_history, cmd);
 
+	    /* parse the command */
 		wait_flag = parse_cmd(cmd, args, ifile, ofile, &split_pos);
 
 		printf("Input file: %s\nOutput file: %s\n", ifile, ofile);
 
 		printf("Split position: %d\n", split_pos);
 
-		// if (get_latter_args(args, split_pos, latter_args) == 0) {
-		// 	print_args(latter_args);
-		// }
-
+		/* execute the command by creating a child process */
 		exe(args, wait_flag, ifile, ofile, split_pos);
 
 		/* clear values */

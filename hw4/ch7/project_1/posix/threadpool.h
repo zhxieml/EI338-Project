@@ -15,6 +15,3 @@ int pool_submit(void (*somefunction)(void *p), void *p);
 void *worker(void *param);
 void pool_init(void);
 void pool_shutdown(void);
-
-int enqueue(task t);
-task *dequeue();
