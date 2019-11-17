@@ -1,4 +1,4 @@
-/**
+    /**
  * Implementation of thread pool.
  */
 
@@ -99,7 +99,6 @@ void pool_init(void) {
     // create the threads at startup
     for (int i = 0; i < NUMBER_OF_THREADS; ++i) {
         pthread_create(&bees[i], NULL, worker, NULL);
-        // printf("Thread [%d] created\n", i);
     }
 
     // initialize the queue

@@ -31,7 +31,7 @@ void schedule() {
     while (t_num > 0) {
         tmp = head;
 
-        // find the first-coming task
+        // find the first-order task
         while (tmp->next != NULL) {
             tmp = tmp->next;
         }

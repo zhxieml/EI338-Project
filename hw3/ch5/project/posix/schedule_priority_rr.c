@@ -14,8 +14,8 @@
 #define max(x,y) (x > y ? x : y)
 #define min(x,y) (x < y ? x : y)
 
-int t_num = 0;
-int priority_max = INT_MIN;
+static int t_num = 0;
+static int priority_max = INT_MIN;
 static struct node *heads[SIZE];
 
 // add a task to the list 
@@ -29,6 +29,7 @@ void add(char *name, int priority, int burst) {
     t->tid = t_num;
     ++t_num;
 
+    // update the maximal priority
     priority_max = max(priority, priority_max);
 
     insert(&heads[priority], t);
