@@ -2,6 +2,9 @@
 /slides
 /Textbooks
 
+## Zip
+*.zip
+
 ## IDE
 *.vscode
 
