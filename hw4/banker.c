@@ -1,0 +1,196 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "banker.h"
+
+// the available amount of each resource
+int available_res[NUMBER_OF_RESOURCE];
+
+// the maximum demand of each customer
+int max_demand[NUMBER_OF_CUSTOMER][NUMBER_OF_RESOURCE];
+
+// the amount currently allocated to each customer
+int allocated_res[NUMBER_OF_CUSTOMER][NUMBER_OF_RESOURCE];
+
+// the remaining need of each customer
+int remain_demand[NUMBER_OF_CUSTOMER][NUMBER_OF_RESOURCE];
+
+void display_info(void) {
+    printf("---------------------------------------------------\n");
+            
+    // output available
+    printf("[Available]\n");
+    
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+        printf("\tRES %d", i + 1);
+    
+    printf("\n");
+
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i)
+        printf("\t  %d", available_res[i]);
+
+    printf("\n");
+
+    // output maximum
+    printf("[Maximum]\n");
+
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+        printf("\tRES %d", i + 1);
+
+    for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+        printf("\nCUS %d", i + 1);
+
+        for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+            printf("\t  %d", max_demand[i][j]);
+    }
+
+    printf("\n");
+
+    // output allocation
+    printf("[Allocation]\n");
+
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+        printf("\tRES %d", i + 1);
+
+    for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+        printf("\nCUS %d", i + 1);
+
+        for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+            printf("\t  %d", allocated_res[i][j]);
+    }
+
+    printf("\n");
+
+    // output need
+    printf("[Need]\n");
+
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+        printf("\tRES %d", i + 1);
+
+    for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+        printf("\nCUS %d", i + 1);
+
+        for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+            printf("\t  %d", remain_demand[i][j]);
+    }
+
+    printf("\n");
+
+    printf("---------------------------------------------------\n");
+}
+
+// parse the command
+// return 1 if error
+// return 2 if request
+// return 3 if release
+int parse_cmd(char *cmd, int *customer_id, int request[]) {
+    char *token;
+	int i = 0;
+    int flag;
+
+    // take the first token
+    token = strtok(cmd, " "); 
+
+    if (!token) 
+        return 1;
+    
+    while (token) {
+        if (i >= NUMBER_OF_RESOURCE + 2)
+            return 1;
+
+        if (i == 0) {
+            if (!strcmp(token, "RQ")) 
+                flag = 2;
+            else if (!strcmp(token, "RL"))
+                flag = 3;
+            else 
+                return 1;
+        }
+
+        else if (i == 1) 
+            *customer_id = atoi(token);
+
+        else 
+            request[i - 2] = atoi(token);
+        
+        token = strtod(NULL, " ");
+        ++i;
+    }
+}
+
+int request_resource(int customer_id, int request[]) {
+    
+}
+
+int main(int argc, char *argv[]) {
+    printf("*********************\n");
+    printf("NUMBER_OF_RESOURCE: %d\n", NUMBER_OF_RESOURCE);
+    printf("NUMBER_OF_CUSTOMER: %d\n", NUMBER_OF_CUSTOMER);
+    printf("*********************\n");
+    
+    // pass the number of resources
+    // 1th resource, 2th resource, ...
+    if (argc != NUMBER_OF_RESOURCE + 1) {
+        printf("Invalid input! Please check the number of input\n");
+        return 1;
+    }
+
+    // initialize available_res
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+        available_res[i] = atoi(argv[i + 1]);
+
+    // read in a testing file to initialize max_demand
+    // each line represents the maximum request for each customer
+    FILE *fp = fopen("test.txt", "r");	
+    
+    for (int i = 0; i < 20; ++i) {
+		fscanf(fp, "%d", &max_demand[i/4][i%4]);
+        remain_demand[i/4][i%4] = max_demand[i/4][i%4];
+    }
+
+	fclose(fp);
+
+    // have the user enter conmands
+    // 'RQ' for requesting resources
+    // 'RL' for releasing resources
+    // '*' for outputing the values
+    char cmd[MAX_CMD];
+    int request[NUMBER_OF_RESOURCE];
+    int customer_id;
+
+    while (TRUE) {
+        printf("Enter the command (input 'exit' to exit)> ");
+		fflush(stdout);
+
+        // read user input
+        fgets(cmd, MAX_CMD, stdin);
+        cmd[strlen(cmd) - 1] = '\0';
+
+        if (!strcmp(cmd, "exit")) 
+            return 0;
+        
+        else if (!strcmp(cmd, "*")) 
+            display_info();
+        
+        else {
+            int valid;
+            valid = parse_cmd(cmd, &customer_id, request);
+
+            if (valid == 1) {
+                printf("Invalid command!\n");
+
+                continue;
+            }
+
+            else if (valid == 2) {
+                request_resource(customer_id, request);
+            }
+
+            else {
+                
+            }
+        }
+    }
+
+    return 0;
+}
