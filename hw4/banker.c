@@ -22,7 +22,7 @@ void display_info(void) {
     printf("[Available]\n");
     
     for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
-        printf("\tRES %d", i + 1);
+        printf("\tRES %d", i);
     
     printf("\n");
 
@@ -35,10 +35,10 @@ void display_info(void) {
     printf("[Maximum]\n");
 
     for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
-        printf("\tRES %d", i + 1);
+        printf("\tRES %d", i);
 
     for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
-        printf("\nCUS %d", i + 1);
+        printf("\nCUS %d", i);
 
         for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
             printf("\t  %d", max_demand[i][j]);
@@ -50,10 +50,10 @@ void display_info(void) {
     printf("[Allocation]\n");
 
     for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
-        printf("\tRES %d", i + 1);
+        printf("\tRES %d", i);
 
     for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
-        printf("\nCUS %d", i + 1);
+        printf("\nCUS %d", i);
 
         for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
             printf("\t  %d", allocated_res[i][j]);
@@ -65,10 +65,10 @@ void display_info(void) {
     printf("[Need]\n");
 
     for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
-        printf("\tRES %d", i + 1);
+        printf("\tRES %d", i);
 
     for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
-        printf("\nCUS %d", i + 1);
+        printf("\nCUS %d", i);
 
         for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
             printf("\t  %d", remain_demand[i][j]);
@@ -83,7 +83,7 @@ void display_info(void) {
 // return 1 if error
 // return 2 if request
 // return 3 if release
-int parse_cmd(char *cmd, int *customer_id, int request[]) {
+int parse_cmd(char *cmd, int *customer_id, int update[]) {
     char *token;
 	int i = 0;
     int flag;
@@ -93,7 +93,7 @@ int parse_cmd(char *cmd, int *customer_id, int request[]) {
 
     if (!token) 
         return 1;
-    
+
     while (token) {
         if (i >= NUMBER_OF_RESOURCE + 2)
             return 1;
@@ -111,15 +111,99 @@ int parse_cmd(char *cmd, int *customer_id, int request[]) {
             *customer_id = atoi(token);
 
         else 
-            request[i - 2] = atoi(token);
+            update[i - 2] = atoi(token);
         
-        token = strtod(NULL, " ");
+        token = strtok(NULL, " ");
         ++i;
     }
+
+    return flag;
+}   
+
+int is_safe() {
+    int avalible_tmp[NUMBER_OF_RESOURCE];
+    int finish_tmp[NUMBER_OF_CUSTOMER];
+    int is_enough; // 1 if need_i <= work
+    int res = TRUE; // 1 if the state is safe
+    int finish = TRUE; // 1 if the customer is finished
+
+    // copy from available_res
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+        avalible_tmp[i] = available_res[i];
+
+    // copy from finish
+    for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+        for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+            finish &= (!remain_demand[i][j]);
+
+        finish_tmp[i] = finish;
+    }
+    
+    // find an index
+    for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+        is_enough = TRUE;
+
+        for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+            is_enough &= (remain_demand[i][j] <= avalible_tmp[j]);
+
+        if (!finish_tmp[i] && remain_demand[i]) {
+            // update avaliable_tmp
+            for (int j = 0; j < NUMBER_OF_RESOURCE; ++j) 
+                avalible_tmp[j] += allocated_res[i][j];
+
+            // update finish_tmp
+            finish_tmp[i] = TRUE;
+
+            // every time avaliable_tmp is updated, back to front
+            i = 0;
+        }
+    }
+
+    for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) 
+        res &= finish_tmp[i];
+
+    return res;
 }
 
-int request_resource(int customer_id, int request[]) {
-    
+int request_resource(int customer_id, int update[]) {
+    // check if the request is too greedy
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+        if (remain_demand[customer_id][i] < update[i] || available_res[i] < update[i])
+            return -1;
+    }
+
+    // update
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+        available_res[i] -= update[i];
+        allocated_res[customer_id][i] += update[i];
+        remain_demand[customer_id][i] -= update[i];
+    }
+
+    if (!is_safe()) {
+        // if not, recover the update by releasing the resources
+        // release_resource(customer_id, update);
+        release_resource(customer_id, update);
+
+        return -1;
+    }
+
+    return 0;
+}
+
+int release_resource(int customer_id, int update[]) {
+    // check if the release is affordable
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+        if (allocated_res[customer_id][i] < update[i])
+            return -1;
+    }
+
+    for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+        available_res[i] += update[i];
+        allocated_res[customer_id][i] -= update[i];
+        remain_demand[customer_id][i] += update[i];
+    }
+
+    return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -155,7 +239,7 @@ int main(int argc, char *argv[]) {
     // 'RL' for releasing resources
     // '*' for outputing the values
     char cmd[MAX_CMD];
-    int request[NUMBER_OF_RESOURCE];
+    int update[NUMBER_OF_RESOURCE];
     int customer_id;
 
     while (TRUE) {
@@ -173,22 +257,22 @@ int main(int argc, char *argv[]) {
             display_info();
         
         else {
-            int valid;
-            valid = parse_cmd(cmd, &customer_id, request);
+            int flag;
+            flag = parse_cmd(cmd, &customer_id, update);
 
-            if (valid == 1) {
+            if (flag == 1)
                 printf("Invalid command!\n");
 
-                continue;
+            else if (flag == 2) {
+                if (request_resource(customer_id, update) == -1)
+                    printf("Failed in request!\n");
+
+                else 
+                    printf("Request accepted!\n");
             }
 
-            else if (valid == 2) {
-                request_resource(customer_id, request);
-            }
-
-            else {
-                
-            }
+            else 
+                release_resource(customer_id, update);
         }
     }
 
