@@ -125,16 +125,18 @@ int is_safe() {
     int finish_tmp[NUMBER_OF_CUSTOMER];
     int is_enough; // 1 if need_i <= work
     int res = TRUE; // 1 if the state is safe
-    int finish = TRUE; // 1 if the customer is finished
+    int finish; // 1 if the customer is finished
 
     // copy from available_res
     for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
         avalible_tmp[i] = available_res[i];
 
-    // copy from finish
+    // test if customers are satisfied
     for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+        finish = TRUE;
+
         for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
-            finish &= (!remain_demand[i][j]);
+            finish &= (remain_demand[i][j] == 0);
 
         finish_tmp[i] = finish;
     }
@@ -146,7 +148,7 @@ int is_safe() {
         for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
             is_enough &= (remain_demand[i][j] <= avalible_tmp[j]);
 
-        if (!finish_tmp[i] && remain_demand[i]) {
+        if (!finish_tmp[i] && is_enough) {
             // update avaliable_tmp
             for (int j = 0; j < NUMBER_OF_RESOURCE; ++j) 
                 avalible_tmp[j] += allocated_res[i][j];
