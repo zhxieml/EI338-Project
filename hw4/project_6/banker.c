@@ -252,6 +252,7 @@ int main(int argc, char *argv[]) {
         fgets(cmd, MAX_CMD, stdin);
         cmd[strlen(cmd) - 1] = '\0';
 
+        // special cases
         if (!strcmp(cmd, "exit")) 
             return 0;
         

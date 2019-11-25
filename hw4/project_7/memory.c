@@ -7,13 +7,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include "memory.h"
 
 void report_stat(void) {
 
 }
 
-int parse_cmd() {
+int parse_cmd(char *cmd) {
 
 }
 
@@ -33,7 +34,13 @@ int main(int argc, char *argv[]) {
         fgets(cmd, MAX_CMD, stdin);
         cmd[strlen(cmd) - 1] = '\0';
 
+        // special cases
+        if (!strcmp(cmd, "STAT"))
+            report_stat();
 
+        // parse the command
+        int flag;
+        flag = parse_cmd(cmd);
     }
 
     return 0;
