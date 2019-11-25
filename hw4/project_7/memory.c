@@ -9,6 +9,14 @@
 #include <stdio.h>
 #include "memory.h"
 
+void report_stat(void) {
+
+}
+
+int parse_cmd() {
+
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         printf("Invalid input!\n");
@@ -18,7 +26,7 @@ int main(int argc, char *argv[]) {
     char cmd[MAX_CMD];
 
     while (TRUE) {
-        printf("Enter the command (input 'exit' to exit)> ");
+        printf("allocator>");
         fflush(stdout);
 
         // read user input
