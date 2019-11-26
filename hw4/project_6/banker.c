@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
     int customer_id;
 
     while (TRUE) {
-        printf("Enter the command (input 'exit' to exit)> ");
+        printf("Enter the command>");
 		fflush(stdout);
 
         // read user input
@@ -263,19 +263,26 @@ int main(int argc, char *argv[]) {
             int flag;
             flag = parse_cmd(cmd, &customer_id, update);
 
-            if (flag == 1)
-                printf("Invalid command!\n");
+            switch (flag) {
+                case 1:
+                    printf("Invalid command!\n");
+                    break;
+                
+                case 2:
+                    if (request_resource(customer_id, update) == -1)
+                        printf("Failed in request!\n");
+                    else 
+                        printf("Request accepted!\n");
 
-            else if (flag == 2) {
-                if (request_resource(customer_id, update) == -1)
-                    printf("Failed in request!\n");
+                    break;
 
-                else 
-                    printf("Request accepted!\n");
+                case 3:
+                    release_resource(customer_id, update);
+                    break;
+                
+                default:
+                    printf("Unknown error occurs\n");
             }
-
-            else 
-                release_resource(customer_id, update);
         }
     }
 
