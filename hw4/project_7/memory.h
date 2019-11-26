@@ -11,3 +11,9 @@ typedef struct node {
 
     struct node *next;
 } Node;
+
+void report_stat(void);
+void compact(void);
+int request_memory(char *process, int space, char *strategy);
+int release_memory(char *process);
+int parse_cmd(char *cmd, char *process, int *space, char *strategy);
