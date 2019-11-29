@@ -31,14 +31,12 @@ void list_destroy(void) {
     Node *tmp = head;
     Node *tmp_next = tmp->next;
 
-    free(tmp->process);
     free(tmp);
 
     while (tmp_next != NULL) {
         tmp = tmp_next;
         tmp_next = tmp_next->next;
 
-        free(tmp->process);
         free(tmp);
     }
 }
@@ -161,8 +159,6 @@ int request_memory(char *process, int space, char *strategy) {
         allocated->next = remain;
         remain->next = hole_prev->next->next;
 
-        printf("%d, %d, %d\n", allocated->low, allocated->high, remain->high);
-
         free(hole_prev->next);
         hole_prev->next = allocated;
 
@@ -249,8 +245,11 @@ int main(int argc, char *argv[]) {
         if (!strcmp(cmd, "STAT"))
             report_stat();
 
-        else if (!strcmp(cmd, "X"))
+        else if (!strcmp(cmd, "X")) {
+            list_destroy();
+
             return 0;
+        }
 
         else if (!strcmp(cmd, "C"))
             compact();
@@ -288,5 +287,6 @@ int main(int argc, char *argv[]) {
 
     }
 
+    list_destroy();
     return 0;
 }
