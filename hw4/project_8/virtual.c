@@ -4,7 +4,7 @@
 
 PTE pt[PAGE_TABLE_ENTRY_NUM];
 TLBE tlb[TLB_ENTRY_NUM];
-char memory[FRAME_NUM * FRAME_SIZE];
+char memory[FRAME_NUM * FRAME_SIZE]; // the char data type occupies a byte of storage
 unsigned frame_to_page[FRAME_NUM];
 int free_frame_index;
 int victim_frame_index; // index of vistim frame in page replacement using the FIFO strategy
@@ -59,24 +59,6 @@ unsigned get_frame_num_from_pt(unsigned page_num) {
 }
 
 unsigned get_frame_num_from_TLB(unsigned page_num) {
-    // try to find it in TLB
-    // int i = 0;
-    // int tmp = 0;
-
-    // while (i < tlb_capacity) {
-    //     if (!tlb[tmp].valid_bit) {
-    //         tmp = (tmp + 1) % TLB_ENTRY_NUM;
-            
-    //         continue;
-    //     }
-
-    //     // find a valid entry
-    //     ++i;
-
-    //     if (tlb[tmp].page_num == page_num)
-    //         return tlb[tmp].frame_num;
-    // }
-
     ++TLB_refer_num;
     
     for (int i = 0; i < tlb_capacity; ++i) {
@@ -118,11 +100,6 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("TEST page_num: %d\n", extract_page_num(65534));
-    printf("TEST offset: %d\n", extract_offset(65534));
-
-    printf("TEST valid: %d\n", pt[0].valid_bit);
-
     FILE *logical_addrs_fp = fopen(argv[1], "r"); 
     FILE *ground_truth_fp = fopen(argv[2], "r");
     unsigned logical_addr, physical_addr;
@@ -135,26 +112,19 @@ int main(int argc, char *argv[]) {
         page_num = extract_page_num(logical_addr);
         offset = extract_offset(logical_addr);
         frame_num = get_frame_num_from_TLB(page_num);
-
         physical_addr = (frame_num << FRAME_NUM_BIT) + offset;
-
-        // ground_truth = fscanf(ground_truth_fp, "%d", &ground_truth);
-
-        // if (ground_truth == EOF) {
-        //     printf("Error! The number of correct addresses doesn't match!\n");
-            
-        //     return 1;
-        // }
-
         sample = memory[physical_addr];
-        // printf("%s\n", ground_truth);
 
         printf("Virtual address: %d Physical address: %d Value: %d\n", logical_addr, physical_addr, sample);
     }
 
     printf("----------------- Statistics -----------------\n");
-    printf("Page-falut rate\t%5.3f\n", page_fault_num / page_refer_num);
-    printf("TLB hit rate\t%5.3f\n", TLB_hit_num / TLB_refer_num);
+    printf("Number of page table entries\t%d\n", PAGE_TABLE_ENTRY_NUM);
+    printf("Page/frame size\t\t\t%d\n", PAGE_SIZE);
+    printf("Number of TLB entries\t\t%d\n", TLB_ENTRY_NUM);
+    printf("Number of frames\t\t%d\n", FRAME_NUM);
+    printf("Page-falut rate\t\t\t%5.3f\n", page_fault_num / page_refer_num);
+    printf("TLB hit rate\t\t\t%5.3f\n", TLB_hit_num / TLB_refer_num);
     printf("----------------------------------------------\n");
 
     fclose(logical_addrs_fp);
