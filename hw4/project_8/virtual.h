@@ -16,7 +16,7 @@
 #define PAGE_SIZE 0x100
 #define TLB_ENTRY_NUM 16
 #define FRAME_SIZE 0x100
-#define FRAME_NUM 256
+#define FRAME_NUM 128
 
 typedef struct page_table_entry {
     unsigned frame_num;
