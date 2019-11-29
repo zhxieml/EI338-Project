@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
         physical_addr = (frame_num << FRAME_NUM_BIT) + offset;
         sample = memory[physical_addr];
 
-        printf("Virtual address: %d Physical address: %d Value: %d\n", logical_addr, physical_addr, sample);
+        printf("Virtual address: %d\tPhysical address: %d\tValue: %d\n", logical_addr, physical_addr, sample);
     }
 
     printf("----------------- Statistics -----------------\n");
