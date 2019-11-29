@@ -157,7 +157,7 @@ int is_safe() {
             finish_tmp[i] = TRUE;
 
             // every time avaliable_tmp is updated, back to front
-            i = 0;
+            i = -1;
         }
     }
 
