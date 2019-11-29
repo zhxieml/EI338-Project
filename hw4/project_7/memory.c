@@ -67,34 +67,35 @@ void compact(void) {
             // adjust
             to_delete = tmp_prev->next;
             tmp_prev->next = tmp_prev->next->next;
-            free(to_delete);
 
+            if (tmp_prev->next == NULL)
+                break;
+
+            free(to_delete);
+        }
+
+        if (tmp_prev != NULL) {
             tmp_prev->next->high -= tmp_prev->next->low - tmp_prev->high;
             tmp_prev->next->low = tmp_prev->high;
         }
 
         else {
-            // adjust
-            tmp_prev->next->high -= tmp_prev->next->low - tmp_prev->high;
-            tmp_prev->next->low = tmp_prev->high;
+            tmp_prev->next->high -= tmp_prev->next->low;
+            tmp_prev->next->low = 0;
         }
 
         tmp_prev = tmp_prev->next;
     }
 
-    // merge if the last one is also a hole
-    if (!strcmp(tmp_prev->process, "NULL")) 
-        tmp_prev->high += compact_space;
+    // push to the tail
+    Node *new = malloc(sizeof(Node));
 
-    else {
-        Node *new = malloc(sizeof(Node));
-        new->low = tmp_prev->high;
-        new->high = new->low + compact_space;
-        strcpy(new->process, "NULL");
-        new->next = NULL;
+    new->low = tmp_prev->high;
+    new->high = new->low + compact_space;
+    strcpy(new->process, "NULL");
+    new->next = NULL;
 
-        tmp_prev->next = new;
-    }
+    tmp_prev->next = new;
 }
 
 int request_memory(char *process, int space, char *strategy) {
@@ -106,7 +107,7 @@ int request_memory(char *process, int space, char *strategy) {
         hole_prev = head;
 
         while (hole_prev->next != NULL) {
-            if (!strcmp(hole_prev->next->process, "NULL") && hole_prev->next->high - hole_prev->next->low > space)
+            if (!strcmp(hole_prev->next->process, "NULL") && hole_prev->next->high - hole_prev->next->low >= space)
                 break; 
 
             hole_prev = hole_prev->next;
@@ -118,8 +119,10 @@ int request_memory(char *process, int space, char *strategy) {
         int best = INT_MAX;
 
         while (tmp->next != NULL) {
-            if (!strcmp(tmp->next->process, "NULL") && tmp->next->high - tmp->next->low > space && tmp->next->high - tmp->next->low < best) 
+            if (!strcmp(tmp->next->process, "NULL") && tmp->next->high - tmp->next->low >= space && tmp->next->high - tmp->next->low < best) {
                 hole_prev = tmp;
+                best = tmp->next->high - tmp->next->low;
+            }
 
             tmp = tmp->next;
         }
@@ -130,8 +133,10 @@ int request_memory(char *process, int space, char *strategy) {
         int worst = INT_MIN;
 
         while (tmp->next != NULL) {
-            if (!strcmp(tmp->next->process, "NULL") && tmp->next->high - tmp->next->low > space && tmp->next->high - tmp->next->low > worst) 
+            if (!strcmp(tmp->next->process, "NULL") && tmp->next->high - tmp->next->low >= space && tmp->next->high - tmp->next->low > worst) {
                 hole_prev = tmp;
+                worst = tmp->next->high - tmp->next->low;
+            }
 
             tmp = tmp->next;
         }
@@ -175,6 +180,29 @@ int release_memory(char *process) {
             strcpy(partition->process, "NULL");
 
         partition = partition->next;
+    }
+
+    // merge unused memory
+    Node *tmp_prev = head;
+    
+    while (tmp_prev->next != NULL) {
+        if (!strcmp(tmp_prev->next->process, "NULL")) {
+            Node *to_merge_tmp = tmp_prev->next;
+            Node *to_delete;
+            Node *merge_next = to_merge_tmp->next;
+
+            while (merge_next != NULL && !strcmp(merge_next->process, "NULL")) {
+                to_merge_tmp->high += merge_next->high - merge_next->low;
+                to_delete = merge_next;
+                merge_next = merge_next->next;
+
+                free(to_delete);
+            }
+
+            to_merge_tmp->next = merge_next;
+        }
+
+        tmp_prev = tmp_prev->next;
     }
 
     // always success
