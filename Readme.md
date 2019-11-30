@@ -1,6 +1,6 @@
 # Project of SJTU EI338
 
-Some SHITTY code. Eight projects in the reference book <Operating System Concepts, 10th Edition> are included:
+Some SHITTY code. Eight projects in the reference book <*Operating System Concepts, 10th Edition*> are included:
 
 1. **Introduction to Linux Kernel Modules**. At the end of Chapter 2 (P1-P7, textbook)
 2. **UNIX Shell & Linux Kernel Module for Task Information**. At the end of Chapter 3(P12-P22, textbook)
