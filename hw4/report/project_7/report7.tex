@@ -1,0 +1,305 @@
+% !TEX program = Xelatex
+\documentclass{article}
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+\usepackage{epsfig,graphicx,subfigure}
+\usepackage{enumitem,balance,mathtools}
+\usepackage{wrapfig}
+\usepackage{mathrsfs, euscript}
+\usepackage{hyperref}
+\usepackage{listings}
+% \usepackage[ruled,lined,boxed,linesnumbered]{algorithm2e}
+\usepackage[ruled]{algorithm2e}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{minibox}
+
+\lstset{
+    basicstyle=\ttfamily,
+    showstringspaces=false,
+    commentstyle=\it\color[RGB]{0,96,96},
+    keywordstyle=\color[RGB]{40,40,255},
+    frame=lines,
+    captionpos=b
+}
+
+% \hypersetup{hidelinks}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{exercise}{Exercise}[section]
+\newtheorem*{solution}{Solution}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\newcommand{\postscript}[2]
+    {\setlength{\epsfxsize}{#2\hsize}
+    \centerline{\epsfbox{#1}}}
+\renewcommand{\baselinestretch}{1.0}
+
+\setlength{\oddsidemargin}{-0.365in}
+\setlength{\evensidemargin}{-0.365in}
+\setlength{\topmargin}{-0.3in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9.1in}
+\setlength{\textwidth}{7in}
+
+% ------ adjust it according to the specific circumstances ----- %
+\title{EI338 Computer Systems Engineering}
+\author{Project 7 Contiguous Memory Allocation}
+% \date{}
+% ---------------------------------------------------------------%
+
+\begin{document}
+
+\maketitle
+
+% ------------------ your name and number ----------------- %
+\begin{center}
+    Zhihui Xie, 517030910356
+\end{center}
+
+% --------------------------------------------------------- %
+The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
+
+\section*{Exercise}
+In this exercise, we will manage a contiguous region of memory. Our program is able to respond to four different requests: 
+
+\begin{enumerate}
+    \item Request for a contiguous block of memory. This is associated with command "RQ".
+    \item Release of a contiguous block of memory. This is associated with command "RL".
+    \item Compact unused holes of memory into one single block. This is associated with command "C".
+    \item Report the regions of free and allocated memory. This is associated with command "STAT".
+\end{enumerate}
+
+\subsection*{Basic Structure}
+First of all, we will assign some amount of initial memory. Once your program has started, it will present the user with the prompt "allocator>". It will then respond to the following commands: RQ (request), RL (release), C(compact), STAT (status report), and X (exit).
+
+\subsection*{Implementation}
+Since a lot of previous projects includes parts about how to manage commands, we skip it here to save space. Apart from that, three main functions are implemented:
+
+\begin{itemize}
+    \item \textit{request\_memory()}, which is used to request some amount of memory using some specific allocation strategy.
+    \item \textit{release\_memory()}, which is used to release some amount of memory occupied by some specific process.
+    \item \textit{compact()}, which is used to compact unused holes of memory into one region.
+\end{itemize}
+
+Contiguous memory is realized by a linked list whose data include the low address, the high address, and the occupying process ("NULL" if unused).
+
+\subsubsection*{request\_memory()}
+\textit{request\_memory()} allocates memory using one of the three approaches depending on the flag that is passed to the RQ command:
+
+\begin{itemize}
+    \item "F" for first fit
+    \item "B" for best fit
+    \item "W" for worst fit
+\end{itemize}
+
+\paragraph{First Fit}
+For the first-fit strategy, we only need to find the first hole.
+\begin{lstlisting}[language=c, caption={Finding the Hole with First-fit Strategy}]
+hole_prev = head;
+
+while (hole_prev->next != NULL) {
+    if (!strcmp(hole_prev->next->process, "NULL") 
+        && hole_prev->next->high - hole_prev->next->low >= space)
+        break; 
+
+    hole_prev = hole_prev->next;
+}
+\end{lstlisting}
+
+\paragraph{Best Fit \& Worst Fit}
+These two strategies are very similar. We will find the smallest/largest hole to allocate memory.
+
+\begin{lstlisting}[language=c, caption={Finding the Hole with Best-fit Strategy}]
+Node *tmp = head;
+int best = INT_MAX;
+
+while (tmp->next != NULL) {
+    if (!strcmp(tmp->next->process, "NULL") 
+        && tmp->next->high - tmp->next->low >= space 
+        && tmp->next->high - tmp->next->low < best) {
+        hole_prev = tmp;
+        best = tmp->next->high - tmp->next->low;
+    }
+
+    tmp = tmp->next;
+}
+\end{lstlisting}
+
+\begin{lstlisting}[language=c, caption={Finding the Hole with Worst-fit Strategy}]
+Node *tmp = head;
+int worst = INT_MIN;
+
+while (tmp->next != NULL) {
+    if (!strcmp(tmp->next->process, "NULL") 
+        && tmp->next->high - tmp->next->low >= space 
+        && tmp->next->high - tmp->next->low > worst) {
+        hole_prev = tmp;
+        worst = tmp->next->high - tmp->next->low;
+    }
+
+    tmp = tmp->next;
+}
+\end{lstlisting}
+
+After finding which hole to allocate memory in, we need to allocate memory in it. This would involve separating it into two nodes and then linking them.    
+
+\begin{lstlisting}[language=c, caption={Allocating Memory in the Hole}]
+// can not find unused memory
+if (hole_prev->next == NULL)
+    return -1;
+
+// allocate memory
+else {
+    Node *allocated = malloc(sizeof(Node));
+    Node *remain = malloc(sizeof(Node));
+    
+    allocated->low = hole_prev->high;
+    allocated->high = allocated->low + space;
+    strcpy(allocated->process, process);
+
+    remain->low = allocated->high;
+    remain->high = hole_prev->next->high;
+    strcpy(remain->process, "NULL");
+
+    allocated->next = remain;
+    remain->next = hole_prev->next->next;
+
+    free(hole_prev->next);
+    hole_prev->next = allocated;
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsubsection*{release\_memory()}
+To release memory used by a process, we can simply traverse the linked list and set all occupied memory nodes' member variable \textbf{process} to "NULL".
+
+\begin{lstlisting}[language=c, caption={Finding the Occupied Memory}]
+Node *partition = head->next;
+
+// find the allocated partition and then release
+while (partition != NULL) {
+    if (!strcmp(partition->process, process))
+        strcpy(partition->process, "NULL");
+
+    partition = partition->next;
+}
+\end{lstlisting}
+
+Besides, we merge unused memory nodes to keep our linked list correct.
+
+\begin{lstlisting}[language=c, caption={Merging the Unused Memory}]
+// merge unused memory
+Node *tmp_prev = head;
+
+while (tmp_prev->next != NULL) {
+    if (!strcmp(tmp_prev->next->process, "NULL")) {
+        Node *to_merge_tmp = tmp_prev->next;
+        Node *to_delete;
+        Node *merge_next = to_merge_tmp->next;
+
+        while (merge_next != NULL && !strcmp(merge_next->process, "NULL")) {
+            to_merge_tmp->high += merge_next->high - merge_next->low;
+            to_delete = merge_next;
+            merge_next = merge_next->next;
+
+            free(to_delete);
+        }
+
+        to_merge_tmp->next = merge_next;
+    }
+
+    tmp_prev = tmp_prev->next;
+}
+
+// always success
+return 0;
+\end{lstlisting}
+
+\subsubsection*{compact()}
+\textit{compact()} shuffles the memory contents so as to place all free memory together in one large block. Here we apply the simplest compaction algorithm, moving all holes toward one end of memory. We traverse the linked list, calculate the total unused memory, and update addresses that have been affected by compaction. 
+
+\begin{lstlisting}[language=c, caption={Traversing the Linked List}]
+Node *tmp_prev = head;
+Node *to_delete;
+int compact_space = 0;
+
+while (tmp_prev->next != NULL) {
+    if (!strcmp(tmp_prev->next->process, "NULL")) {
+        compact_space += tmp_prev->next->high - tmp_prev->next->low;
+
+        // adjust
+        to_delete = tmp_prev->next;
+        tmp_prev->next = tmp_prev->next->next;
+
+        if (tmp_prev->next == NULL)
+            break;
+
+        free(to_delete);
+    }
+
+    if (tmp_prev != NULL) {
+        tmp_prev->next->high -= tmp_prev->next->low - tmp_prev->high;
+        tmp_prev->next->low = tmp_prev->high;
+    }
+
+    else {
+        tmp_prev->next->high -= tmp_prev->next->low;
+        tmp_prev->next->low = 0;
+    }
+
+    tmp_prev = tmp_prev->next;
+}
+\end{lstlisting}
+
+Finally, a merged block of free memory is then added to the end of the linked list.
+
+\begin{lstlisting}[language=c, caption={Moving Holes Toward One End}]
+// move toward one end
+Node *new = malloc(sizeof(Node));
+
+new->low = tmp_prev->high;
+new->high = new->low + compact_space;
+strcpy(new->process, "NULL");
+new->next = NULL;
+
+tmp_prev->next = new;
+\end{lstlisting}
+
+\subsection*{Result}
+To test whether out program is correct, we perform a list of commands check its correctness. The command file is as follows:
+
+\begin{lstlisting}[caption={command.txt}]
+RQ P0 100 W
+RQ P1 50 W
+RQ P2 300 W
+RQ P3 300 W	
+STAT
+RL P1
+RL P3
+RQ P4 30 W
+RQ P5 20 B
+STAT
+RL P0
+RQ P6 50 F
+RQ P7 300 F
+STAT
+C
+STAT
+X
+\end{lstlisting}
+
+The result of an experiment redirecting file \textbf{command.txt} as our input varifies the correctness.
+
+\begin{figure}[h]
+    \centering
+    
+    \includegraphics[width=12cm]{../fig/7_0}
+    \caption{Result}
+    \label{7_0}
+\end{figure}
+\end{document}

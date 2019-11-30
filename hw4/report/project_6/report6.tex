@@ -1,0 +1,252 @@
+% !TEX program = Xelatex
+\documentclass{article}
+\usepackage{amsmath,amscd,amsbsy,amssymb,latexsym,url,bm,amsthm}
+\usepackage{epsfig,graphicx,subfigure}
+\usepackage{enumitem,balance,mathtools}
+\usepackage{wrapfig}
+\usepackage{mathrsfs, euscript}
+\usepackage{hyperref}
+\usepackage{listings}
+% \usepackage[ruled,lined,boxed,linesnumbered]{algorithm2e}
+\usepackage[ruled]{algorithm2e}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{minibox}
+
+\lstset{
+    basicstyle=\ttfamily,
+    showstringspaces=false,
+    commentstyle=\it\color[RGB]{0,96,96},
+    keywordstyle=\color[RGB]{40,40,255},
+    frame=lines,
+    captionpos=b
+}
+
+% \hypersetup{hidelinks}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{exercise}{Exercise}[section]
+\newtheorem*{solution}{Solution}
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\newcommand{\postscript}[2]
+    {\setlength{\epsfxsize}{#2\hsize}
+    \centerline{\epsfbox{#1}}}
+\renewcommand{\baselinestretch}{1.0}
+
+\setlength{\oddsidemargin}{-0.365in}
+\setlength{\evensidemargin}{-0.365in}
+\setlength{\topmargin}{-0.3in}
+\setlength{\headheight}{0in}
+\setlength{\headsep}{0in}
+\setlength{\textheight}{9.1in}
+\setlength{\textwidth}{7in}
+
+% ------ adjust it according to the specific circumstances ----- %
+\title{EI338 Computer Systems Engineering}
+\author{Project 6 Banker’s Algorithm}
+% \date{}
+% ---------------------------------------------------------------%
+
+\begin{document}
+
+\maketitle
+
+% ------------------ your name and number ----------------- %
+\begin{center}
+    Zhihui Xie, 517030910356
+\end{center}
+
+% --------------------------------------------------------- %
+The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
+
+\section*{Exercise}
+In this exercise, we will implement the banker's algorithm. Customers request and release resources from the bank. The banker will grant a request only if it leaves the system in a safe state. A request that leaves the system in an unsafe state will be denied.
+
+\subsection*{Basic Structure}
+The banker will consider requests from $n$ customers for $m$ resources types and keep track of the resources. The banker will grant a request if it satisfies the safety algorithm outlined as follows:
+
+\begin{center}
+    \begin{minipage}{16cm}
+        \begin{algorithm}[H]
+            \SetAlgoLined
+            % \KwData{}
+            % \KwResult{how to write algorithm with \LaTeX2e }
+            initialize $Work \leftarrow Available$ and $Finish[i] \leftarrow false$ for $i=0,1, \ldots, n-1$\;
+            \ForEach{index $i$ of customer}{
+                \If{$Finish[i] == false$ \&\& $Need[i] \leq Work$} {
+                    update $Work$, $Finish$\;
+                }
+
+                $i \leftarrow 0$\tcc*[l]{back to front when updating}
+            }
+
+            \If{$Finish[i] == true$ for all $i$} {
+                \Return{true}
+            }
+                
+            \Return{false}
+            \caption{Safety Algorithm}
+            \label{Safety Algorithm}
+        \end{algorithm} 
+    \end{minipage}
+\end{center}
+
+If a request does not leave the system in a safe state, the banker will deny it.
+
+\subsection*{Implementation}
+To implement the banker's algorithm, we realize mainly three functions:
+
+\begin{itemize}
+    \item \textit{request\_resource()}, which is used to request some amount of resources by a customer.
+    \item \textit{release\_resource()}, which is used to release some amount of resources by a customer.
+    \item \textit{is\_safe()}, which is used to check whether the current state is saft or not.
+\end{itemize}
+
+In addition, we maintain four global variables to keep track of the resources.
+
+\begin{lstlisting}[language=c, caption={Data Structures for Tracked Resources}]
+// the available amount of each resource
+int available_res[NUMBER_OF_RESOURCE];
+
+// the maximum demand of each customer
+int max_demand[NUMBER_OF_CUSTOMER][NUMBER_OF_RESOURCE];
+
+// the amount currently allocated to each customer
+int allocated_res[NUMBER_OF_CUSTOMER][NUMBER_OF_RESOURCE];
+
+// the remaining need of each customer
+int remain_demand[NUMBER_OF_CUSTOMER][NUMBER_OF_RESOURCE];
+\end{lstlisting}
+
+\subsubsection*{is\_safe()}
+The function \textit{is\_safe()} checks whether it is a safe state based on the current resources. It directly follows Algorithm \ref{Safety Algorithm}.
+
+Firstly, we copy data from the global variables to prevent changing the original data.
+
+\begin{lstlisting}[language=c, caption={is\_safe() I}]
+// copy from available_res
+for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) 
+    avalible_tmp[i] = available_res[i];
+
+// test if customers are satisfied
+for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+    finish = TRUE;
+
+    for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+        finish &= (remain_demand[i][j] == 0);
+
+    finish_tmp[i] = finish;
+}
+\end{lstlisting}
+
+Then, we want to keep finding a customer which can achieve its maximal demand with avalible resources so that its allocated resources can be released. Every time we find one, we start again from the beginning. This process terminates with no such a customer exists. 
+
+\begin{lstlisting}[language=c, caption={is\_safe() II}]
+// find an index
+for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) {
+    is_enough = TRUE;
+
+    for (int j = 0; j < NUMBER_OF_RESOURCE; ++j)
+        is_enough &= (remain_demand[i][j] <= avalible_tmp[j]);
+
+    if (!finish_tmp[i] && is_enough) {
+        // update avaliable_tmp
+        for (int j = 0; j < NUMBER_OF_RESOURCE; ++j) 
+            avalible_tmp[j] += allocated_res[i][j];
+
+        // update finish_tmp
+        finish_tmp[i] = TRUE;
+
+        // every time avaliable_tmp is updated, back to front
+        i = -1;
+    }
+}
+\end{lstlisting}
+
+Ana finally, if every customer is fully satisfied, i.e., every one releases its allocated resources once, the original state is safe. Otherwise it is unsafe.
+
+\begin{lstlisting}[language=c, caption={is\_safe() III}]
+for (int i = 0; i < NUMBER_OF_CUSTOMER; ++i) 
+    res &= finish_tmp[i];
+
+return res;
+\end{lstlisting}
+
+\subsubsection*{request\_resource()}
+The function \textit{request\_resource()} will return -1 to deny the request if it does not leave the system in a saft state or return 0 to grant a request if it satisfies the safety algorithm. To achieve it in a simplest way, our strategy is to first update the global variables and then check whether it is safe using \textit{is\_safe()}. If not, we call \textit{release\_resource()} to easily release the wrongly allocated resources.
+
+\begin{lstlisting}[language=c, caption={request\_resource() I}]
+// check if the request is too greedy
+for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+    if (remain_demand[customer_id][i] < update[i] || available_res[i] < update[i])
+        return -1;
+}
+
+// update
+for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+    available_res[i] -= update[i];
+    allocated_res[customer_id][i] += update[i];
+    remain_demand[customer_id][i] -= update[i];
+}
+
+if (!is_safe()) {
+    // if not, recover the update by releasing the resources
+    // release_resource(customer_id, update);
+    release_resource(customer_id, update);
+
+    return -1;
+}
+\end{lstlisting}
+
+\subsubsection*{release\_resource()}
+Releasing resources is even easier. As long as the customer processes such amount of resources, we can directly update tracked resources in global variables to release them.
+
+\begin{lstlisting}[language=c, caption={release\_resource()}]
+// check if the release is affordable
+for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+    if (allocated_res[customer_id][i] < update[i])
+        return -1;
+}
+
+for (int i = 0; i < NUMBER_OF_RESOURCE; ++i) {
+    available_res[i] += update[i];
+    allocated_res[customer_id][i] -= update[i];
+    remain_demand[customer_id][i] += update[i];
+}
+
+return 0;
+\end{lstlisting}
+
+\subsection*{Result}
+To test whether out program is correct, we firstly allocate some amount of resources to each of customers, and then check if a request can be granted. The initial avaliable resources are $(16, 11, 12, 13)$.
+
+\begin{figure}[h]
+    \centering
+    
+    \includegraphics[width=12cm]{../fig/6_0}
+    \caption{Result 1}
+    \label{6_0}
+\end{figure}
+
+There are three testing requests: a request from $T_4$ arriving for $ (2, 2, 2, 4)$, a request from $T_2$ arriving for $(0, 1, 1, 0)$, and a request from $T_3$ arriving for $(2, 2, 1, 2)$.
+
+\begin{figure}[htbp]
+    \centering
+    
+    \subfigure[Request 1] {
+        \includegraphics[width=0.3\textwidth]{../fig/6_1}
+    }
+    \subfigure[Request 2] {
+        \includegraphics[width=0.3\textwidth]{../fig/6_2}
+    }
+    \subfigure[Request 3] {
+        \includegraphics[width=0.3\textwidth]{../fig/6_3}
+    }
+    \caption{Result 2}
+    \label{6_1}
+\end{figure}
+\end{document}
