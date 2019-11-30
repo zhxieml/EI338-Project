@@ -1,3 +1,6 @@
+*.o
+*.exe
+
 ## Slices & Textbooks
 /slides
 /Textbooks
