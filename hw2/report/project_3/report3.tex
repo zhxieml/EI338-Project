@@ -61,7 +61,7 @@
 % --------------------------------------------------------- %
 The environment used in this project is \textbf{Deepin 15.11}, the latest version of an open source operating system based on Debian's stable branch. The kernel version is \textbf{Linux version 4.15.0}.
 
-\section*{Exercise 1}
+\section*{Exercise 1 Multithreaded Sorting Application}
 In this exercise, we are asked to sort a series of integers using multithreaded method. The basic idea is very simple. We first divide the list into two sublists, each of which is then sorted by an individual thread. Then in the main thread, after waiting for these two sub-threads, do the merge.
 
 \subsection*{Basic Struture}
@@ -189,7 +189,7 @@ A simple test shows our currectness.
     \label{1}
 \end{figure}
 
-\section*{Exercise 2}
+\section*{Exercise 2 Fork-Join Sorting Application}
 This time, we revise the implementation in Exercise 1 using Java's fork-join parallelism API. Two versions will be implemented:
 
 \begin{itemize}

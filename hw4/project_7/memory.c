@@ -87,7 +87,7 @@ void compact(void) {
         tmp_prev = tmp_prev->next;
     }
 
-    // push to the tail
+    // move toward one end
     Node *new = malloc(sizeof(Node));
 
     new->low = tmp_prev->high;
@@ -145,6 +145,7 @@ int request_memory(char *process, int space, char *strategy) {
     else 
         return -1;
 
+    // can not find unused memory
     if (hole_prev->next == NULL)
         return -1;
 

@@ -35,7 +35,7 @@ unsigned get_frame_num_from_pt(unsigned page_num) {
 
     unsigned frame_num;
 
-    // find free frame
+    // find a free frame
     if (free_frame_index < FRAME_NUM) {
         pt[page_num].frame_num = frame_num = free_frame_index++;
         pt[page_num].valid_bit = 1;
@@ -47,7 +47,7 @@ unsigned get_frame_num_from_pt(unsigned page_num) {
         pt[page_num].frame_num = frame_num = victim_frame_index;
         pt[page_num].valid_bit = 1;
         pt[frame_to_page[frame_num]].valid_bit = 0; // erase
-        victim_frame_index = (victim_frame_index + 1) % FRAME_NUM; // realized by a circular array
+        victim_frame_index = (victim_frame_index + 1) % FRAME_NUM; // circular array
         frame_to_page[frame_num] = page_num;
     }
 
@@ -90,8 +90,6 @@ unsigned get_frame_num_from_TLB(unsigned page_num) {
 
     return frame_num;
 }
-
-void update_TLB();
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
