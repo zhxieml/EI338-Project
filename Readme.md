@@ -1,3 +1,3 @@
-- 讲师: 吴晨涛
-- 学分: 4
-- 学期: 大三上
+# Project of SJTU EI338
+
+Some shitty code. 
